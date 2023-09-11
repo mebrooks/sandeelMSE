@@ -55,18 +55,6 @@ oldeff=oldeff*is.finite(oldeff)
 eff = matrix(colMeans(oldeff[df.tmb$bidx==max(df.tmb$bidx),], na.rm = TRUE), #assume seasonal effort is mean of past years
 						 byrow = TRUE, ncol=nseason, nrow = nages)
 
-#prep data for stock assessment
-df.assess=df.tmb
-
-#Allocate storage
-Fscaling = array(dim=c(nyears), dimnames=list(year=startyear+(1:nyears)))
-TAC = array(dim=c(nyears), dimnames=list(year=startyear+(1:nyears))) #Allowable Catch
-Ntrue = array(dim=c(length(ages), nseason, nyears), dimnames=list(age=ages, q=1:nseason, year=startyear+(1:nyears)))
-Ftrue = array(dim=c(length(ages), nseason, nyears), dimnames=list(age=ages, q=1:nseason, year=startyear+(1:nyears)))
-Nest = array(dim=c(length(ages), 1, nyears), dimnames=list(age=ages, q=1, year=startyear+(1:nyears))) 
-Fest = array(dim=c(length(ages), nseason, nyears), dimnames=list(age=ages, q=1:nseason, year=startyear+(1:nyears)))
-SSBtrue = array(dim=c(nseason,nyears), dimnames=list(q=1:nseason, year=startyear+(1:nyears)))
-BioParstrue = array(dim=c(4, nyears, length(ages), nseason), dimnames=list(par=c("M", "PM", "weca","west"), year=startyear+(1:nyears), age=ages, q=1:nseason))
 
 #For Area 1r, RTM for year y is not available until year y+1, so we have a structure to save it
 #Start it with RTM values from 2021 (taken from 2023 assessment)
@@ -79,7 +67,7 @@ RTMpast = c(-1, 24728.818, 26167.961, 2076.158, -1)
 #cl=makeCluster(min(c(20, nrow(grid))), type="FORK")
 #triallist = parApply(cl, grid, 1, function(grid){
 triallist=list()
-for(i in 1:nrow(grid){
+for(i in 1:nrow(grid)){
 	trial=grid[i,"trial"]
 	Fcap=grid[i,"Fcap"]
 	Fhist =grid[i,"Fhist"]
@@ -87,6 +75,18 @@ for(i in 1:nrow(grid){
 	TACmin=grid[i,"TACmin"]
 
 	set.seed(20+trial)
+	#prep data for stock assessment
+	df.assess=df.tmb
+	
+	#Allocate storage
+	Fscaling = array(dim=c(nyears), dimnames=list(year=startyear+(1:nyears)))
+	TAC = array(dim=c(nyears), dimnames=list(year=startyear+(1:nyears))) #Allowable Catch
+	Ntrue = array(dim=c(length(ages), nseason, nyears), dimnames=list(age=ages, q=1:nseason, year=startyear+(1:nyears)))
+	Ftrue = array(dim=c(length(ages), nseason, nyears), dimnames=list(age=ages, q=1:nseason, year=startyear+(1:nyears)))
+	Nest = array(dim=c(length(ages), 1, nyears), dimnames=list(age=ages, q=1, year=startyear+(1:nyears))) 
+	Fest = array(dim=c(length(ages), nseason, nyears), dimnames=list(age=ages, q=1:nseason, year=startyear+(1:nyears)))
+	SSBtrue = array(dim=c(nseason,nyears), dimnames=list(q=1:nseason, year=startyear+(1:nyears)))
+	BioParstrue = array(dim=c(4, nyears, length(ages), nseason), dimnames=list(par=c("M", "PM", "weca","west"), year=startyear+(1:nyears), age=ages, q=1:nseason))
 	
 	#simulate multivariate log-normal N, E, R, Q for this trial (only use N in first year)
 	true.states = mvrnorm(1, mu=last.years.states, Sigma=Sigma)
@@ -254,11 +254,11 @@ for(i in 1:nrow(grid){
 	if(big_output){
 		dat=join(join(join(join(join(join(join(Ntrue, Ftrue), Nest), Fest), BioParstrue), Fscaling), TAC), SSBtrue)
 	}else{
-		dat=join(join(join(join(Ntrue,  BioParstrue), Fscaling), TAC), SSBtrue)
+		dat=join(join(join(join(join(Ntrue,  Nest), Fscaling), Fest), TAC), SSBtrue)
 	}	
-#	return(dat)
+	#	return(dat)
 	triallist[[i]]=dat
-})# end parApply on grid ---------------------------------------------------
+}# end parApply on grid ---------------------------------------------------
 #stopCluster(cl)
 
 dat= combine.trials(triallist, grid)
