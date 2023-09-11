@@ -1,0 +1,124 @@
+Date: 01/25/22  Start time:21:44:00 run time:9 seconds
+
+objective function (negative log likelihood):  105.164
+Number of parameters: 56
+Maximum gradient: 5.70898e-005
+Akaike information criterion (AIC):   322.328
+Number of observations used in the likelihood:
+                            Catch    CPUE     S/R Stomach     Sum
+                             279      55      31       0     365
+
+objective function weight:
+                          Catch  CPUE   S/R
+                          1.00  1.00  0.01
+
+unweighted objective function contributions (total): 
+                Catch    CPUE    S/R   Stom.  Stom N.  Penalty     Sum
+               94.3    10.7    17.5     0.0     0.0      0.00     122
+
+
+unweighted objective function contributions (per observation): 
+                Catch   CPUE     S/R   Stomachs
+               0.34    0.19    0.56    0.00
+
+
+contribution by fleet:
+----------------------
+Dredge survey 2004-2021     total:   5.197   mean:   0.226
+Acoustic survey             total:   5.522   mean:   0.173
+
+F, season effect:
+-----------------
+age: 0
+    1986-1998:   0.000 1.000
+    1999-2016:   0.000 1.000
+age: 1 - 4
+    1986-1998:   0.894 0.500
+    1999-2016:   1.065 0.500
+
+F, age effect:
+--------------
+                0      1      2      3      4
+1986-1998:  0.103  0.363  0.395  0.302  0.302
+1999-2016:  0.056  0.199  0.272  0.287  0.287
+
+
+Exploitation pattern (scaled to mean F=1)
+-----------------------------------------
+                        0      1      2      3      4
+1986-1998 season 1:      0  0.648  0.707  0.539  0.539
+          season 2:  0.175  0.308  0.336  0.257  0.257
+
+1999-2016 season 1:      0  0.589  0.806  0.851  0.851
+          season 2:  0.143  0.255  0.349  0.369  0.369
+
+
+sqrt(catch variance) ~ CV:
+--------------------------
+
+              season
+----------------------
+age        1       2
+
+ 0               1.160
+ 1       0.624   1.004
+ 2       0.624   1.004
+ 3       1.104   1.205
+ 4       1.104   1.205
+
+
+Survey catchability:
+--------------------
+                           age 0    age 1    age 2    age 3    age 4
+ Dredge survey 2004-2021       0.484    0.484
+ Acoustic survey                        2.827    5.589    3.467    3.467
+
+Stock size dependent catchability (power model)
+-----------------------------------------------    age 0    age 1    age 2    age 3    age 4
+Dredge survey 2004-2021        1.04     1.00
+Acoustic survey                            1.00     1.00     1.00     1.00
+
+sqrt(Survey variance) ~ CV:
+---------------------------
+                           age 0    age 1    age 2    age 3    age 4
+ Dredge survey 2004-2021        0.79     0.72
+ Acoustic survey                         0.57     0.57     0.90     0.90
+
+Average F:
+----------
+         sp. 1    
+1986:    0.462
+1987:    0.720
+1988:    0.924
+1989:    1.042
+1990:    0.588
+1991:    0.710
+1992:    0.328
+1993:    0.613
+1994:    0.654
+1995:    0.522
+1996:    0.513
+1997:    0.922
+1998:    1.173
+1999:    1.106
+2000:    1.122
+2001:    0.718
+2002:    0.735
+2003:    0.395
+2004:    0.276
+2005:    0.133
+2006:    0.056
+2007:    0.335
+2008:    0.361
+2009:    0.031
+2010:    0.394
+2011:    0.255
+2012:    0.154
+2013:    0.075
+2014:    0.299
+2015:    0.393
+2016:    0.154
+
+
+Recruit-SSB                               alfa      beta       recruit s2     recruit s
+Area-3r      Hockey stick -break.:     1467.163   8.000e+004   1.137          1.066

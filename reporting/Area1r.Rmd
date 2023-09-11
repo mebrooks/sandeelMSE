@@ -1,0 +1,412 @@
+---
+title: "Area 1r"
+author: "Mollie Brooks"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    extra_dependencies: ["float"]
+fig_caption: true 
+---
+
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(echo = FALSE, message =FALSE, warning=FALSE, fig.pos = "H", out.extra = "")
+knitr::opts_knit$set(eval.after = "fig.cap")
+
+stock.name="SAN_area_1r_C"
+Fcap1=0.3
+pfyrmin = 2036
+pfyrmax	= 2041
+basename=paste0("MSE_varNERQ_", stock.name, "_RTM_small")
+
+output.path = file.path(stock.name, "plots")
+input.path = "~/Desktop/DTU_postdoc/Sandeel_MSE"
+
+load(file.path(input.path, "MSE_code", stock.name, "organized data.Rdata"))
+load(file.path(input.path, paste0(basename, ".Rdata")))
+Blimdat=data.frame(year=unique(dat$year), Blim=Blim, lo=NA, hi=NA, variable="SSB", type=NA)
+
+
+library(ggplot2); theme_set(theme_bw())
+library(plyr)
+library(reshape)
+library(smsR)
+```
+
+## Assessment used for conditioning
+```{r baseplot, fig.cap="Estimates of stock up to 2021 from the benchmark assessment which is used to condition the MSE." }
+smsPlots(df.tmb, sas, Blim=Blim, type = "stack")
+```
+
+\newpage
+
+## Check for failed simulation trials
+We expect this to be zero, but there's some chance that some assessment models didn't converge. When an assessment doesn't converge, the simulation trial ends in that year.
+
+```{r nas, fig.cap="Cumulative percent of simulation trails that have failed over simulated years."}
+
+nas = ddply(dat, ~Fcap+year+TACmin, summarize, 
+						nas = mean(is.na(SSBtrue)))
+
+ggplot(nas, aes(x=year, y=nas*100))+
+  ggtitle(stock.name)+
+	geom_line()+
+	theme(axis.text.x = element_text(angle = -45))+
+  scale_x_continuous(breaks=c(2021, 2026, 2031, 2036, 2041))+
+	facet_grid(TACmin~Fcap, labeller="label_both")+
+	ylab("% of failed simulations")
+```
+\newpage
+
+## Worm plots
+
+```{r worms, fig.cap=paste0("These are 5 simulation trials for one HCR with Fcap = ", Fcap1)}
+results = join(subset(dat, q==2 & age==0)[,c("year","trial","Fcap","Ntrue","Fbar", "TACmin")],#recruitment from age0, q2
+							subset(dat, q==1) [,c("year","trial","Fcap","SSBtrue","TAC", "TACmin")])#SSB from q1
+
+names(results)[4:8]=c("Recruitment", "F[1-2]", "TACmin", "SSB", "Catch")
+
+#Reshape data to make a multiplanel plot
+results2 = unique(melt(results, id.vars=c("year","trial","Fcap","TACmin")))
+
+#Worm plots for 1 HCR
+trials=1:5
+results3=subset(results2, round(Fcap,2)==Fcap1 & trial %in% trials)
+ggplot(data = results3 , aes(year, value))+
+  ggtitle(stock.name)+
+	geom_line(data=subset(results3, variable %in% c("SSB","F[1-2]")))+
+	geom_col(data=subset(results3, variable %in% c("Recruitment","Catch")))+
+	geom_hline(data=Blimdat, aes(yintercept=Blim, variable=variable), lty=2)+
+	facet_grid(variable~trial, scale="free", labeller = label_parsed, switch="y")+
+	ylab(NULL)+
+	theme(axis.text.x = element_text(angle = -45))+
+	scale_x_continuous(breaks=c(2021, 2026, 2031, 2036, 2041)) 
+ggsave(file.path(output.path, paste0(basename,"_worm_plot_Fcap", Fcap1, ".png")), height=4, width=6)
+```
+\newpage
+
+## Simulated recruitment
+
+```{r simrec, fig.cap="The grey points are the simulated values for all trials. The years marked in red  are the MLE values from the bencmark assessment. Note that simulations include estimation error around the MLEs in addition to process error."}
+
+SR = join(getR(df.tmb, sas)[,c("R", "years")], getSSB(df.tmb, sas)[,c("SSB", "years")]) 
+
+# ggplot(SR, aes(SSB, R))+
+# 	geom_text(aes(label=years), colour="red") +
+# 	geom_vline(xintercept = Blim)+
+# 	ylab("Recruitment")+
+# 	scale_color_discrete(name="")+
+# 	ggtitle(stock.name)+
+# 	scale_x_continuous(expand = c(0, 0), limits = c(0, NA))
+
+simsSR = unique(join(subset(dat, q==2 & age==0 &round(Fcap, 2)  ==Fcap1)[,c("year","trial","Ntrue")],#recruitment from age0, q2
+											subset(dat, q==1 &round(Fcap, 2)  ==Fcap1) [,c("year","trial","SSBtrue")]))#SSB from q1
+
+ggplot(simsSR, aes(SSBtrue, Ntrue))+geom_point(alpha=0.1)+
+	scale_x_continuous(expand = c(0, 0), limits = c(0, max(SR$SSB)))+
+	geom_vline(xintercept = Blim, colour="red")+
+	ylab("Recruitment")+
+	geom_text(data=SR, aes(x=SSB, y=R, label=years), colour="red") +
+	ggtitle(stock.name)
+ggsave(file.path(output.path, paste0(basename,"_simulated_recruitment.png")), height=5, width=6)
+
+```
+\newpage
+
+## Assessment and simulations together
+
+```{r timeseries, fig.cap="The benchmark assessment model used for conditioning the MSE contains catch and survey data up through 2021 because the 2021 year already occurred. The benchmark assessment uses that to estimate the red part of the timeseries (ending in 2021), including a projection for what SSB might be in 2022. The MSE simulations start in 2022 by fitting that same assessment model and using the management procedure to get a TAC in 2022. Then the 2022 fishery and stock dynamics proceed to produce observations to go into the 2022 management procedure. The green part of the timeseries is the true values from the operating model which starts in 2022. Because we're only plotting annual dynamics in this graph, there is a gap between 2021 and 2022, except for projected SSB."}
+
+results = unique(join(subset(dat, q==2 & age==0)[,c("year","trial","Fcap","Ntrue","Fbar")],#recruitment from age0, q2
+							 subset(dat, q==1) [,c("year","trial","Fcap","SSBtrue","TAC")]))#SSB from q1
+
+names(results)[4:7]=c("Recruitment \n(billion individuals)", #change units later
+											"F[1-2]", 
+											"SSB \n(1000 tonnes)", #change units later
+											"Catch \n(1000 tonnes)")#change units later
+
+#Reshape data to make a multiplanel plot
+results2 = unique(melt(results, id.vars=c("year","trial","Fcap")))
+
+results3=ddply(results2, ~year+Fcap+variable, summarize,
+							 lo= quantile(value, 0.05, na.rm=TRUE),
+							 mid= quantile(value, 0.5, na.rm=TRUE),
+							 hi= quantile(value, 0.95, na.rm=TRUE),
+							 type="sim")
+					
+
+logCatch$variable="Catch \n(1000 tonnes)"#change units later
+logSSB$variable="SSB \n(1000 tonnes)"#change units later
+logFavg$variable="F[1-2]"
+logRec$variable="Recruitment \n(billion individuals)"#change units later
+old=rbind(logRec, logFavg, logSSB, logCatch)
+oldresults=transform(old, 
+										 mid=exp(m), 
+										 lo=exp(m-1.645*sd), #5 percentile
+										 hi=exp(m+1.645*sd), #95 percentile
+										 type="est")
+	
+tmp=subset(results3, round(Fcap, 2)==Fcap1)
+select=c("year", "variable", "lo", "mid", "hi", "type" )
+
+bothresults=rbind(oldresults[,select],
+									tmp[,select])
+bothresults[bothresults$variable !="F[1-2]",]$mid=bothresults[bothresults$variable !="F[1-2]",]$mid/1000
+bothresults[bothresults$variable !="F[1-2]",]$lo=bothresults[bothresults$variable !="F[1-2]",]$lo/1000
+bothresults[bothresults$variable !="F[1-2]",]$hi=bothresults[bothresults$variable !="F[1-2]",]$hi/1000
+
+bothresults[bothresults$variable =="Recruitment \n(billion individuals)",]$mid=bothresults[bothresults$variable =="Recruitment \n(billion individuals)",]$mid/1e3
+bothresults[bothresults$variable =="Recruitment \n(billion individuals)",]$lo=bothresults[bothresults$variable =="Recruitment \n(billion individuals)",]$lo/1e3
+bothresults[bothresults$variable =="Recruitment \n(billion individuals)",]$hi=bothresults[bothresults$variable =="Recruitment \n(billion individuals)",]$hi/1e3
+
+## assessment with sims --------------------------------
+
+Blimdat=data.frame(year=unique(dat$year), 
+									 Blim=Blim/1000, 
+									 lo=NA, hi=NA, 
+									 variable="SSB \n(1000 tonnes)", type=NA)
+
+ggplot(bothresults, aes(x=year, y=mid, colour=type))+
+  ggtitle(stock.name)+
+	geom_line()+geom_ribbon(aes(ymin=lo, ymax=hi, fill=type), alpha=.4, linetype=0)+
+	facet_grid(variable~., scale="free", switch="both")+ylab(NULL)+
+	theme(panel.spacing = unit(0, "lines"))+
+	geom_hline(data=Blimdat, aes(yintercept=Blim), lty=2)+
+	theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))+
+	theme(legend.position="none")+
+	scale_x_continuous(expand = c(0,0))
+
+ggsave(file.path(output.path, paste0(basename,"_timeseries_Fcap", Fcap1, ".png")), height=5, width=6)
+
+```
+\newpage
+
+## Risk by year by Fcap and TACmin
+
+```{r riskcalcs, fig.cap="Risk by year for different HCRs." }
+results = join(subset(dat, q==2 & age==0)[,c("year","trial","Fcap","Ntrue","Fbar", "TACmin")],#recruitment from age0, q2
+							subset(dat, q==1) [,c("year","trial","Fcap","SSBtrue","TAC", "TACmin")])#SSB from q1
+
+#Risk by year
+risk = ddply(results, ~Fcap+TACmin, summarize, 
+						 risk=mean(SSBtrue<Blim))
+
+tmp = ddply(results, ~Fcap+year+TACmin, summarize, 
+						riskbyy=mean(SSBtrue<Blim),
+						closed = mean(TAC<2)
+)
+risk3=ddply(tmp, ~Fcap+TACmin, summarise, 
+						prob3=max(riskbyy))
+
+
+ggplot(tmp, aes(year, riskbyy, group=Fcap))+geom_line(aes(colour=Fcap))+
+  ggtitle(stock.name)+
+	facet_grid(TACmin~., labeller=label_both)+
+	theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))+
+	ylab("prob SSB<Blim")
+ggsave(file.path(output.path, paste0(basename,"_risk_by_y_by_Fcap.png")), height=4, width=6)
+
+# ggplot(tmp, aes(year, closed))+geom_line(aes(colour=factor(Fcap)))+
+# 	facet_grid(TACmin~., labeller=label_both)+
+# 	theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=0.5))+
+# 	ylab("probability of closure")
+```
+
+\newpage
+
+## Error over time 
+
+```{r errortimeline, fig.cap = "Error rate over time"}
+dat0 = ddply(dat, ~Fcap+TACmin+year+age, summarise,
+						 Nerr_med = median((Ntrue-Nest)/Ntrue, na.rm=TRUE),
+						 Nerr_mean = mean((Ntrue-Nest)/Ntrue, na.rm=TRUE),
+						 Nerr_lo = quantile((Ntrue-Nest)/Ntrue, 0.025, na.rm=TRUE),
+						 Nerr_hi = quantile((Ntrue-Nest)/Ntrue, 0.975, na.rm=TRUE)
+)
+
+						 
+ggplot(dat0, aes(year, Nerr_mean))+ geom_line()+
+	geom_ribbon(aes(ymin=Nerr_lo, ymax=Nerr_hi), alpha=0.5)+
+	facet_grid(Fcap~age, labeller=label_both)
+
+dat2 = ddply(subset(dat, age %in% 1:2), ~Fcap+TACmin+year+trial, summarise, 
+						 Fbarest = sum(Fest/2), 
+						 Fbartrue = Fbar[1])
+
+dat3 = ddply(dat2, ~Fcap+TACmin+year, summarise,
+						 Ferr_med = median((Fbartrue-Fbarest)/Fbartrue, na.rm=TRUE),
+						 Ferr_mean = mean((Fbartrue-Fbarest)/Fbartrue, na.rm=TRUE),
+						 Ferr_lo = quantile((Fbartrue-Fbarest)/Fbartrue, 0.025, na.rm=TRUE),
+						 Ferr_hi = quantile((Fbartrue-Fbarest)/Fbartrue, 0.975, na.rm=TRUE)
+)
+
+						 
+ggplot(dat3, aes(year, Ferr_mean))+ geom_line()+
+	geom_ribbon(aes(ymin=Ferr_lo, ymax=Ferr_hi), alpha=0.5)+
+	facet_grid(Fcap~., labeller=label_both)
+
+
+```
+
+```{r tachist, fig.cap="These are the TACs across all years of all simulation trials. The scale of the histogram is too big to see the values near 0 (monitoring TAC in the right column is 5 on the scale of 1000 tonnes)."}
+ggplot(subset(dat, Fcap>0))+geom_histogram(aes(TAC/1000), breaks = seq(0, 400, by=5))+
+  ggtitle(stock.name)+
+	facet_grid(Fcap~TACmin, labeller=label_both)+
+	xlim(0, 400) +
+	xlab("TAC (1000 tonnes)")
+```
+
+
+The values of TAC in 2022 are less variable than other years because they are controlled by the benchmark assessment, minimum TAC, and Fcap. The values for the 2022 TAC are `r sort(unique(round(subset(dat, year==2022)$TAC,-3)))` and those spikes can be seen in the following histogram.
+
+```{r zoomhist, fig.cap="In this zoomed in portion of the histogram (only up to 50,000 tonnes), we can see the stacks at the minimum TAC values, as well as at values from 2022."}
+ggplot(subset(dat, Fcap>0))+geom_histogram(aes(TAC/1000), breaks = seq(0, 50, by=2))+
+  ggtitle(stock.name)+
+	facet_grid(Fcap~TACmin, labeller=label_both)+
+	xlim(0, 50) +
+	xlab("TAC (1000 tonnes)")
+```
+
+\newpage
+
+## Summary plots
+
+```{r biggerdat, fig.cap=paste0("Probability that TAC is based on Fcap in years ", pfyrmin, " to ", pfyrmax)}
+tmp = subset(dat, year<=pfyrmax & year>=pfyrmin & age %in% c(1:2))
+tmp2 = ddply(tmp, ~Fcap+TACmin+year+trial, summarise, atFcap = mean(round(sum(Fest/2), 2)==round(Fcap, 1)))
+tmp3 = ddply(tmp2, ~Fcap+TACmin, summarise, atFcap = mean(atFcap))
+
+ggplot(tmp3, aes(Fcap, atFcap))+
+	geom_line()+
+  ggtitle(stock.name)+
+	facet_grid(TACmin~., labeller = label_both)
+```
+
+```{r Fbarhist, fig.cap=paste0("Implemented average F for ages 1 and 2. It can be over Fcap (red vertical line) because there is error in the estimated stock numbers and exploitation pattern that are used to set the TAC. Our implementation model assumes that it will not exceed the highest estimated past effort ", round(Fhist, 2), ".")}
+ggplot(subset(dat, year>=pfyrmin & year<=pfyrmax & Fcap>0))+
+  ggtitle(stock.name)+
+	geom_histogram(aes(Fbar))+
+	facet_grid(Fcap~TACmin, labeller = label_both)+
+	geom_vline(aes(xintercept=Fcap), colour="red")
+			 
+```
+
+
+
+```{r TACtimeline}
+
+###############################################
+# Long-term stable behavior
+
+TACsum=ddply(subset(dat, year>=pfyrmin & year<=pfyrmax & q==1), ~Fcap+TACmin, summarize,
+						 yield_med = median(TAC, na.rm = TRUE),
+						 yield_mean = mean(TAC, na.rm = TRUE),
+						 lo=quantile(TAC, 0.025, na.rm = TRUE),
+						 hi=quantile(TAC, 0.975, na.rm = TRUE),
+						 lowTAC=mean(TAC<=5000))
+
+SSBsum=ddply(subset(dat, year>=pfyrmin & year<=pfyrmax & q==1), ~Fcap+TACmin, summarize,
+						 risk = mean(SSBtrue<Blim, na.rm = TRUE))
+
+tmp=join(tmp3, join(TACsum, SSBsum))
+
+
+trisk=0.05+mean(subset(SSBsum, Fcap==0 & TACmin==0)$risk) #no fishery
+```
+
+Average risk of SSB<Blim in `r pfyrmin` to `r pfyrmax` with no fishing is `r mean(subset(SSBsum, Fcap==0 & TACmin==0)$risk)`. Therefore, we use `r trisk` as a cutoff of risk.
+
+```{r riskvsFcap, fig.cap=paste0("Average risk of SSB<Blim in ", pfyrmin, " to ", pfyrmax, " increases with Fcap. The two lines are with or without monitoring TAC. The dashed line is 0.05 plus the risk in an unfished stock.")}
+ggplot(tmp, aes(Fcap, risk))+geom_line(aes(colour=factor(TACmin)))+
+  ggtitle(stock.name)+
+	guides(colour=guide_legend(title="TACmin"))+
+	ylab("prob (SSB < Blim)")+
+	scale_x_continuous(breaks = seq(0, 1, by = 0.25))+
+	geom_hline(yintercept=trisk, lty=2)
+ggsave(file.path(output.path, paste0(basename,"_risk vs Fcap.png")), height=2.5, width=6.5) 
+```
+
+```{r yieldvsrisk, fig.cap=paste0("Yield at a given risk level summarized over ", pfyrmin, " to ", pfyrmax, ", calculated using the range of Fcap values. The dashed line is 0.05 plus the risk in an unfished stock.")}
+ggplot(tmp, aes(risk, yield_med))+geom_line()+
+  ggtitle(stock.name)+
+	geom_ribbon(aes(ymin=lo, ymax=hi), alpha=0.5)+
+	ylab("Yield")+
+	xlab("prob (SSB < Blim)")+
+#	scale_x_continuous(breaks = seq(0, 0.1, by = 0.05))+
+#	geom_vline(xintercept=0.05, lty=2)+
+	geom_vline(xintercept=trisk, lty=2)+
+#	coord_cartesian(xlim = c(0.0,0.1))+
+	facet_grid(TACmin~., labeller="label_both")
+
+ggsave(file.path(output.path, paste0(basename,"_risk vs yield.png")), height=2.5, width=7) 
+
+```
+
+\newpage
+
+```{r interp}
+
+findx=function(x,y,p=0.05) {
+	n=1:length(x)
+	lo.obs=sum(y<p)
+	hi.obs=lo.obs+1
+	delta=(p-y[lo.obs])/(y[hi.obs]-y[lo.obs])
+	x[lo.obs]+delta*(x[hi.obs]-x[lo.obs])
+} 
+
+
+```
+
+## Interpolated values at risk = `r trisk` without monitoring TAC
+```{r interp2}
+		 
+tmp2=subset(tmp, TACmin==0)
+tmp3 = join(tmp2, 
+						ddply(subset(dat, TACmin==0), ~Fcap, summarize,
+						 x =mean(round(Fbar, 2)  == round(Fhist, 2))))
+kable(c(
+									"Fcap" = round(with(tmp2, findx(Fcap, risk, p=trisk)), 2),
+									"Yield (median)"= round(with(tmp2, findx(yield_med, risk, p=trisk)), -3),
+									"Yield (mean)"= round(with(tmp2, findx(yield_mean, risk, p=trisk)), -3),
+									"Yield 2.5 percentile" = round(with(tmp2, findx(lo, risk, p=trisk)), -3),
+									"Yield 97.5 percentile" = round(with(tmp2, findx(hi, risk, p=trisk)), -3),
+									"prob (TAC<=5000)" = round(with(tmp2, findx(lowTAC, risk, p=trisk)), 2),
+									"atFhist" = round(with(tmp3, findx(x, risk, p=trisk)), 2),
+									"atFcap" = round(with(tmp3, findx(atFcap, risk, p=trisk)), 2)
+									), format.args=list(scientific = FALSE),
+			caption = paste0("Given the relationship between risk, Fcap and yield, we can interpolate what values we expect to be associated at risk = ", trisk, ", without a monitoring TAC. We also include the performance statistic 'atFhist' which is the proportion of simulations where fishing effort reached its historical high. We also include the probability that the fishery will be closed."))
+```
+\newpage
+
+<!-- ## Compare 2016 management procedure to possible new one -->
+
+<!-- ```{r 2016MP} -->
+<!-- load(paste0("/Users/molliebrooks/Desktop/DTU_postdoc/Sandeel_MSE/MSE_varNERQ_2016MP_", stock.name, "_RTM_small.Rdata")) -->
+
+<!-- TACsum=with(subset(dat, year>=2036 & year<=2041 & q==1), c( -->
+<!-- 						 yield_med = median(TAC, na.rm = TRUE), -->
+<!-- 						 yield_mean = mean(TAC, na.rm = TRUE), -->
+<!-- 						 lo=unname(quantile(TAC, 0.025, na.rm = TRUE)), -->
+<!-- 						 hi=unname(quantile(TAC, 0.975, na.rm = TRUE)), -->
+<!-- 						 lowTAC=mean(TAC<=5000))) -->
+
+<!-- risk = with(subset(dat, year>=2036 & year<=2041 & q==1),  -->
+<!-- 						 mean(SSBtrue<Blim, na.rm = TRUE)) -->
+
+<!-- kable(c( -->
+<!-- 									"risk SSB<Blim"=risk, -->
+<!-- 									"Yield (median)"= unname(round(TACsum["yield_med"], -3)), -->
+<!-- 									"Yield (mean)"= unname(round(TACsum["yield_mean"], -3)), -->
+<!-- 									"Yield 2.5 percentile" = unname(round(TACsum["lo"], -3)), -->
+<!-- 									"Yield 97.5 percentile" = unname(round(TACsum["hi"], -3)), -->
+<!-- 									"prob (TAC<=5000)" = unname(round(TACsum["lowTAC"], 2)) -->
+<!-- 									), format.args=list(scientific = FALSE), digits=2, -->
+<!-- 			caption = paste0("These are some performance statistics produced if we used the same operating model as in the MSE but replaced the reference points (Besc and Fcap) in the management procedure with those from the 2016 benchmark. Summarized years are 2036 to 2041.")) -->
+
+<!-- ``` -->
+\newpage
+
+## Acknowledgement
+
+![](/Users/molliebrooks/Desktop/DTU_postdoc/logos/EMFF-logo-bredformat-UK.jpg)
+

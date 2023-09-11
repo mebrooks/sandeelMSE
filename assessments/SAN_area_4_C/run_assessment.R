@@ -1,0 +1,109 @@
+
+
+#devtools::install_github('https://github.com/nissandjac/smsR', dependencies = TRUE)
+library(smsR)
+
+survey2 = FALSE
+powerIN =NA
+cvDredge = c(0,1)
+
+maxage <- 4
+years = 1993:2021
+nyear <- length(years)
+seasons <- 1:2
+
+dat <- getDataSMS(wd,
+                  maxage = maxage,
+                  survey.age = list(0:1, 0:1), # Ages in the two surveys
+                  survey.years = list(2008:2021,1999:2003),
+                  survey.names = c('Dredge','Dredge2'),
+                  survey.quarter = c(2,2), # ? not sure if this is correct
+                  years = years,
+                  seasons = seasons
+
+
+
+)
+
+Qminage = c(0,0) # Qminage = c(0,1) minimum age in surveys
+Qmaxage = c(1,1) #Qmaxage = c(1,3)
+Qlastage <- c(1,1)
+surveyStart = c(0.75,0.75) #c(0.75,0)
+surveyEnd =  c(1,1) # c(1,0) Does the survey last throughout the season it's conducted?
+surveySeason = c(2,2) # c(2,1)Which seasons do the surveys occur in
+surveyCV =  list(cvDredge, cvDredge) #c(1,2)),
+powers =list(powerIN, powerIN)#list(powerIN, NA)
+
+
+
+
+  ages <- 0:maxage
+  nseason <- 2 # Number of seasons
+  beta <- 48000
+
+  # Fishing effort
+  # Get the effort data
+  Feffort <- matrix(scan(file.path(wd,'effort.in'), comment.char = '#'),
+                    ncol = 2, nrow = nyear)
+
+  # Normalize effort to 1
+  # Format input data matrices into TMB style
+  # mtrx <- sumtable_to_matrix(sandeel.age)
+  Surveyobs <- survey_to_matrix(dat[['survey']], years)
+  Catchobs <- df_to_matrix(dat[['canum']], season =  1:2)
+
+  nocatch <- read.table(file.path(wd,'zero_catch_year_season.in'), comment = '#', skip = 3)
+  #Feffort[which(df.tmb$years == 2013),2] <- 0 # This is different two places in the input files
+
+  df.tmb <- get_TMB_parameters(
+    mtrx = dat[['mtrx']], # List that contains M, mat, west, weca
+    Surveyobs = Surveyobs, # Survey observations (dimensions age, year, quarter, number of surveys)
+    Catchobs = Catchobs, # Catch observations  (dimensions age, year, quarter)
+    years = years, # Years to run
+    nseason = nseason, # Number of seasons
+    useEffort = 1,
+    ages = ages, # Ages of the species
+    recseason = 2, # Season where recruitment occurs
+    Fmaxage = 3, # Fully selected fishing mortality age
+    Fbarage = c(1,2),
+    CminageSeason = c(1,1),
+    Qminage = Qminage, # minimum age in surveys
+    Qlastage = Qlastage,
+    Qmaxage = Qlastage,
+    isFseason = c(1,0), # Seasons to calculate fishing in
+    effort = Feffort,
+    blocks = FALSE,
+    powers = powers,
+    endFseason = 2, # which season does fishing stop in the final year of data
+    nocatch = as.matrix(nocatch),
+    surveyStart = surveyStart,
+    surveyEnd =  surveyEnd, # Does the survey last throughout the season it's conducted?
+    surveySeason = surveySeason, # Which seasons do the surveys occur in
+    surveyCV =  surveyCV,
+    catchCV = list(c(0,1,3),
+                   c(0,1,3)),
+    recmodel = 2, # Chose recruitment model (2 = estimated)
+    estCV = c(0,2,0),
+    beta = beta, # Hockey stick plateau
+    nllfactor = c(1,1,0.05) # Factor for relative strength of log-likelihood
+
+  )
+
+  # Get initial parameter structure
+  parms <- getParms(df.tmb)
+
+  # Get non-estimated parameters, based on info in df.tmb
+  #mps <- getMPS(df.tmb, parms, mapExtra = 'SDsurvey')
+
+  mps <- getMPS(df.tmb, parms)
+
+  # Set boundaries
+  # This model works best if SDsurvey is mapped
+
+  #parms[names(parms) == 'SDsurvey'][[1]] <- c(0.55, 0.3)
+
+  # Try initial parameters in weird spots
+  sas <- runAssessment(df.tmb, parms = parms, mps = mps)
+  
+  save(df.tmb, sas, file=file.path(wd, "assessment_objects.Rdata"))
+  

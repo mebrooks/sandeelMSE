@@ -1,0 +1,109 @@
+#  HCR_oprion.dat option file
+# the character "#" is used as comment character, such that all text and numbers after #  in a line are skipped by the SMS program
+#
+2026 	# last.prediction.year 
+200 	# no.MCMC.iterations 
+#  years.wsea 
+2000 
+2009 
+#  years.weca 
+2000 
+2009 
+#  years.propmat 
+1983 
+1984 
+#  last.season.adj.factor 
+1 
+#  rec.noise 
+-2 
+2.75 
+#  rec.noise.input 
+0 
+#  HCR 
+24 
+#  Trigger 
+0 
+0 
+#  Trigger.a.b 
+0 
+0 
+0 
+0 
+0 
+0 
+#  HCR.F.TAC 
+1 
+#  constant.F 
+1 
+#  constant.TAC 
+0 
+#  target.SSB 
+280000 
+#  real.time.F 
+0.01 
+#  TAC.cap 
+6e+05 
+#  F.cap 
+1.1 
+#  F.constraints 
+0 
+0 
+#  TAC.constraints 
+0 
+0 
+#  SSB.constraints 
+0 
+0 
+#  obs.noise 
+-10 
+10 
+#  real.time 
+1 
+1 
+0.39 
+0 
+#  survey 
+-1 
+0 
+0 
+0 
+#  assessment 
+1 
+1 
+0.41 
+0 
+#  implementation 
+-1 
+0 
+0 
+0 
+#  intermediate.TAC 
+-1 
+-1 
+#  intermediate.F 
+1 
+1 
+#  inter.year 
+1 
+#  inter.F.TAC 
+0 
+#  rec.autocor 
+0 
+0 
+#  recruit.adjust 
+1 
+#  recruit.adjust.CV 
+0 
+0 	# read.rec.SSB.parm 
+#  age.group.output 
+0 0 0 0 0 0 0 1 
+#  read.stock.N 
+0 0 
+1 	# no.ini.pop 
+#  read.F 
+0 0 
+0 	# use.read.F 
+#  other.predator 
+-1 
+-1 
+-1 
