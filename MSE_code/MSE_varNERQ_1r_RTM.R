@@ -91,7 +91,7 @@ triallist = parApply(cl, grid, 1, function(grid){
 	#pick out starting stock numbers
 	Ntrue.next = exp(matrix(true.states[Nidx], nrow= nages))
 	
-	#pick out exploitation pattern and resacale it
+	#pick out exploitation pattern and rescale it
 	E.true = exp(true.states[Fidx])
   #rescale exploitation to make Fscaling = Fbar
   Ftrue0=matrix(E.true, nrow= nages)*eff #only temporary to get Etrue, overwritten later with Fscaling included
@@ -252,13 +252,13 @@ triallist = parApply(cl, grid, 1, function(grid){
 	if(big_output){
 		dat=join(join(join(join(join(join(join(Ntrue, Ftrue), Nest), Fest), BioParstrue), Fscaling), TAC), SSBtrue)
 	}else{
-		dat=join(join(join(join(Ntrue,  BioParstrue), Fscaling), TAC), SSBtrue)
+		dat=join(join(join(join(join(Ntrue,  Nest), Fscaling), Fest), TAC), SSBtrue)
 	}	
 	return(dat)
-})# end parApply on grid ---------------------------------------------------
+})#end parApply on grid
 stopCluster(cl)
 
 dat= combine.trials(triallist, grid)
 
-if(!big_output) save(dat, grid, sampyr, file=file.path(mse.output.dir, paste0("MSE_varNERQ_", stock.name, "_RTM_small.Rdata")))
-if(big_output) save(dat, grid, sampyr, file=file.path(mse.output.dir, paste0("MSE_varNERQ_", stock.name, "_RTM.Rdata")))
+if(!big_output) save(dat, grid, sampyr, file=paste0("MSE_varNERQ_", stock.name, "_RTM_small.Rdata"))
+if(big_output) save(dat, grid, sampyr, file=paste0("MSE_varNERQ_", stock.name, "_RTM.Rdata"))
