@@ -20,9 +20,9 @@ pfyrmax	= 2041
 basename=paste0("MSE_varNERQ_", stock.name, "_RTM_small")
 
 output.path = file.path(stock.name, "plots")
-input.path = "~/Desktop/DTU_postdoc/Sandeel_MSE"
+input.path = "MSE_results"
 
-load(file.path(input.path, "MSE_code", stock.name, "organized data.Rdata"))
+load(file.path("assessments", stock.name, "organized_data.Rdata"))
 load(file.path(input.path, paste0(basename, ".Rdata")))
 Blimdat=data.frame(year=unique(dat$year), Blim=Blim, lo=NA, hi=NA, variable="SSB", type=NA)
 

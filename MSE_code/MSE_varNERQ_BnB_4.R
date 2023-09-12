@@ -2,13 +2,14 @@
 stock.name="SAN_area_4_C"
 big_output=TRUE
 
-mse.stock.dir = paste0("~/Sandeel_MSE/MSE_code/", stock.name)
-code.path = "~/Sandeel_MSE/smsR"
-#mse.stock.dir = paste0("~/Desktop/DTU_postdoc/Sandeel_MSE/MSE_code/", stock.name)
-#code.path = "~/Desktop/DTU_postdoc/Sandeel_MSE/smsR"
+#settings for HPC
+#mse.stock.dir = paste0("~/Sandeel_MSE/MSE_code/", stock.name)
+#code.path = "~/Sandeel_MSE/smsR"
+mse.stock.dir = file.path("assessments", stock.name)
+mse.output.dir = "MSE_results"
 
-load(file.path(mse.stock.dir, "organized data.Rdata"))
-source(file.path(mse.stock.dir, "global_stock_settings.R"))
+load(file.path(mse.stock.dir, "organized_data.Rdata"))
+source(file.path(mse.stock.dir, "forecast_stock_settings.R"))
 
 library(smsR)
 require(MASS)
